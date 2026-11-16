@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SphereAI - Hệ Thống AI Xử Lý & Phân Tích Dữ Liệu</title>
+    <!-- Fonts (Hỗ trợ đầy đủ 100% tiếng Việt) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/style.css?v=14.0">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- ==================== THANH BÊN TRÁI (MÀU XANH NHẠT DỄ NHÌN) ==================== -->
+        <aside class="left-sidebar" id="left-sidebar">
+            <div class="sidebar-header">
+                <div class="brand-logo">
+                    <div class="sphere-icon">
+                        <span class="core"></span>
+                        <span class="ring ring-1"></span>
+                    </div>
+                    <span class="brand-name">SphereAI</span>
+                </div>
+                <button class="sidebar-toggle-btn" id="btn-toggle-sidebar" title="Thu gọn / Mở rộng thanh bên">
+                    <span id="sidebar-toggle-icon">◀</span>
+                </button>
+            </div>
+
+            <!-- Trạng thái hiện tại -->
+            <div class="sidebar-dataset-badge" id="sidebar-dataset-info">
+                <div class="status-indicator">
+                    <span id="nav-data-dot" class="status-dot dot-idle"></span>
+                    <span id="nav-data-text">Chưa có dữ liệu</span>
+                </div>
+                <small id="nav-data-sub">Chọn file &amp; bối cảnh để bắt đầu</small>
+            </div>
+
+            <!-- Menu điều hướng gọn gàng -->
+            <nav class="sidebar-nav">
+                <a href="javascript:void(0)" class="nav-item active" data-view="home">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Nhập liệu &amp; Duyệt</span>
+                </a>
+
+                <div class="nav-section-title">KẾT QUẢ ĐẦU RA</div>
+
+                <!-- 1. File Excel -->
+                <div class="nav-item-group" id="nav-group-excel">
+                    <a href="javascript:void(0)" class="nav-item" data-view="excel">
+                        <span class="nav-icon">📑</span>
+                        <span class="nav-label">File Excel</span>
+                    </a>
+                    <div class="nav-sub-actions">
+                        <button class="sub-btn btn-preview" data-view="excel">👁️ Xem trước</button>
+                        <a href="/api/export/excel" class="sub-btn btn-download-link" id="nav-dl-excel">📥 Tải xuống</a>
+                    </div>
+                </div>
+
+                <!-- 2. Dashboard -->
+                <div class="nav-item-group" id="nav-group-dashboard">
+                    <a href="javascript:void(0)" class="nav-item" data-view="dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label">Dashboard</span>
+                    </a>
+                    <div class="nav-sub-actions">
+                        <button class="sub-btn btn-preview" data-view="dashboard">👁️ Xem trước</button>
+                        <a href="/api/export/excel" class="sub-btn btn-download-link">📥 Tải xuống</a>
+                    </div>
+                </div>
+
+                <!-- 3. Báo cáo Word -->
+                <div class="nav-item-group" id="nav-group-report">
+                    <a href="javascript:void(0)" class="nav-item" data-view="report">
+                        <span class="nav-icon">📄</span>
+                        <span class="nav-label">Báo cáo Word</span>
+                    </a>
+                    <div class="nav-sub-actions">
+                        <button class="sub-btn btn-preview" data-view="report">👁️ Xem trước</button>
+                        <a href="/api/export/word" class="sub-btn btn-download-link" id="nav-dl-word">📥 Tải xuống</a>
+                    </div>
+                </div>
+
+                <div class="nav-section-title">HỆ THỐNG</div>
+                <a href="javascript:void(0)" class="nav-item" id="nav-reset-data">
+                    <span class="nav-icon">🔄</span>
+                    <span class="nav-label">Làm mới toàn bộ</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- ==================== NỘI DUNG CHÍNH ==================== -->
+        <main class="main-content-area" id="main-content-area">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="mobile-menu-btn" id="btn-mobile-menu">☰</button>
+                    <span class="view-title" id="current-view-title">Hệ Thống Xử Lý &amp; Phân Tích Dữ Liệu</span>
+                </div>
+                <div class="topbar-right">
+                    <span class="step-progress-pill" id="top-stage-pill">Bước 1: Nhập dữ liệu &amp; Bối cảnh</span>
+                </div>
+            </header>
+
+            <!-- Thanh trạng thái đang xử lý -->
+            <div id="ai-loading-bar" class="ai-loading-bar" style="display: none;">
+                <div class="spinner"></div>
+                <div class="loading-msg">
+                    <strong id="loading-title">Hệ thống đang xử lý...</strong>
+                    <span id="loading-subtitle">Vui lòng đợi trong giây lát...</span>
+                </div>
+            </div>
+
+            <!-- ==================== VIEW 1: TRANG CHỦ (NHẬP DỮ LIỆU + BỐI CẢNH & DUYỆT) ==================== -->
+            <section class="content-view active-view" id="view-home">
+                <div class="home-workspace-container">
+                    
+                    <!-- KHUNG TRUNG TÂM: TẢI FILE LÊN & BỐI CẢNH DOANH NGHIỆP -->
+                    <div class="central-input-hub">
+                        <div class="hub-grid">
+                            <!-- CỘT TRÁI: 1. TẢI FILE DỮ LIỆU -->
+                            <div class="hub-card upload-hub-card" id="dropzone-box">
+                                <div class="hub-card-header">
+                                    <span class="hub-step-tag">Mục 1</span>
+                                    <h3>📂 Đưa File Dữ Liệu Lên</h3>
+                                </div>
+                                
+                                <div class="upload-drop-area" id="upload-drop-area">
+                                    <div class="upload-icon-big">📊</div>
+                                    <h4 id="upload-status-title">Kéo thả file Excel (.xlsx, .xls) hoặc CSV vào đây</h4>
+                                    <p id="upload-status-sub">Hoặc chọn trực tiếp từ máy tính của bạn</p>
+                                    
+                                    <div id="selected-file-badge" class="selected-file-badge" style="display: none;">
+                                        <span>✅</span>
+                                        <span id="selected-file-name">data.xlsx</span>
+                                        <button type="button" id="btn-remove-file" class="btn-remove-file" title="Bỏ chọn">✕</button>
+                                    </div>
+
+                                    <div class="upload-btn-group">
+                                        <label for="center-file-input" class="btn-choose-file">
+                                            <span>📁 Chọn file từ máy tính</span>
+                                        </label>
+                                        <input type="file" id="center-file-input" accept=".xlsx,.xls,.csv,.tsv,.txt" style="display: none;">
+                                        
+                                        <button type="button" class="btn-use-sample" id="btn-center-sample">
+                                            <span>⚡ Dùng dữ liệu Bán lẻ mẫu</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CỘT PHẢI: 2. BỐI CẢNH DOANH NGHIỆP -->
+                            <div class="hub-card context-hub-card">
+                                <div class="hub-card-header">
+                                    <span class="hub-step-tag tag-purple">Mục 2</span>
+                                    <h3>🏢 Nhập Bối Cảnh Doanh Nghiệp</h3>
+                                </div>
+
+                                <div class="context-body">
+                                    <div class="context-presets">
+                                        <button type="button" class="preset-chip" data-context="Doanh nghiệp Bán lẻ đa kênh (Website, Đối tác, Cửa hàng): Cần theo dõi tăng trưởng doanh thu - lợi nhuận theo tháng, kiểm soát cơ cấu chi phí giá vốn theo kênh và tìm nguyên nhân kênh Cửa hàng bị sụt giảm doanh số.">🛒 Bán lẻ đa kênh</button>
+                                        <button type="button" class="preset-chip" data-context="Doanh nghiệp Kinh doanh B2B: Cần đánh giá hiệu quả doanh thu và chi phí theo từng kênh phân phối, tối ưu biên lợi nhuận gộp và chuẩn hóa dữ liệu đơn hàng bị bỏ trống kênh.">💼 Kinh doanh &amp; Phân phối</button>
+                                        <button type="button" class="preset-chip" data-context="Bộ phận Tài chính - Kế toán: Cần đối chiếu biến động doanh thu và chi phí giữa các tháng, kiểm soát tỷ trọng chi phí giá vốn và đề xuất kế hoạch phân bổ ngân sách trình Ban Giám đốc.">💰 Tài chính - Kế toán</button>
+                                        <button type="button" class="preset-chip" data-context="Doanh nghiệp Sản xuất & Kho vận: Cần chuẩn hóa dữ liệu nhập xuất, đánh giá chi phí vận hành theo từng nhóm sản phẩm và tối ưu hiệu suất cung ứng.">📦 Sản xuất &amp; Kho vận</button>
+                                    </div>
+
+                                    <textarea 
+                                        id="business-context-input" 
+                                        rows="3" 
+                                        placeholder="Nhập bối cảnh doanh nghiệp & vấn đề đang gặp phải (Bắt buộc nhập đủ cả Dữ liệu và Bối cảnh mới bắt đầu phân tích)..."
+                                    ></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- THANH KIỂM TRA 2 ĐIỀU KIỆN & NÚT BẮT ĐẦU -->
+                        <div class="hub-action-footer">
+                            <div class="readiness-checklist">
+                                <div class="ready-item" id="ready-data-status">
+                                    <span>⏳ 1. Chưa đưa dữ liệu lên</span>
+                                </div>
+                                <div class="ready-item" id="ready-context-status">
+                                    <span>⏳ 2. Chưa nhập bối cảnh doanh nghiệp</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-run-workflow btn-locked" id="btn-run-workflow">
+                                <span class="run-icon">🚀</span>
+                                <span id="btn-run-text">Đưa đủ Dữ liệu &amp; Bối cảnh để Bắt đầu phân tích</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TRẠM DUYỆT 1 (SAU BƯỚC 2): ĐỐI CHIẾU LÀM SẠCH SO VỚI FILE BAN ĐẦU & KIỂM DUYỆT -->
+                    <div id="human-gatekeeper-panel" class="human-review-panel" style="display: none;">
+                        <div class="hr-header hr-header-blue">
+                            <div class="hr-title-group">
+                                <span class="hr-badge-human">👤 BƯỚC KIỂM DUYỆT (CON NGƯỜI DUYỆT)</span>
+                                <h3>🛡️ Kết quả Làm sạch so với File ban đầu &amp; Kiểm duyệt dữ liệu</h3>
+                            </div>
+                            <span id="hr-gk-loop-tag" class="hr-loop-tag">Lần làm sạch #1</span>
+                        </div>
+
+                        <div class="hr-body">
+                            <div class="cleaning-comparison-box">
+                                <div class="cmp-title">📊 Đối chiếu chi tiết: File ban đầu → Sau khi Làm sạch</div>
+                                <div class="cmp-cards-grid">
+                                    <div class="cmp-card">
+                                        <span class="cmp-label">Điểm chất lượng dữ liệu</span>
+                                        <div class="cmp-values">
+                                            <span class="val-before" id="cmp-health-before">0%</span>
+                                            <span class="cmp-arrow">→</span>
+                                            <strong class="val-after text-green" id="cmp-health-after">100%</strong>
+                                        </div>
+                                        <small id="cmp-health-note">Đã xử lý lỗi dữ liệu</small>
+                                    </div>
+                                    <div class="cmp-card">
+                                        <span class="cmp-label">Số dòng dữ liệu</span>
+                                        <div class="cmp-values">
+                                            <span class="val-before" id="cmp-rows-before">0</span>
+                                            <span class="cmp-arrow">→</span>
+                                            <strong class="val-after" id="cmp-rows-after">0</strong>
+                                        </div>
+                                        <small id="cmp-rows-note">Đã lọc bỏ dòng trùng</small>
+                                    </div>
+                                    <div class="cmp-card">
+                                        <span class="cmp-label">Dòng bị trùng lặp</span>
+                                        <div class="cmp-values">
+                                            <span class="val-before" id="cmp-dup-before">0</span>
+                                            <span class="cmp-arrow">→</span>
+                                            <strong class="val-after text-green" id="cmp-dup-after">0</strong>
+                                        </div>
+                                        <small id="cmp-dup-note">Xóa trùng lặp 100% &amp; trùng mã</small>
+                                    </div>
+                                    <div class="cmp-card">
+                                        <span class="cmp-label">Ô bị trống (Thiếu dữ liệu)</span>
+                                        <div class="cmp-values">
+                                            <span class="val-before" id="cmp-missing-before">0</span>
+                                            <span class="cmp-arrow">→</span>
+                                            <strong class="val-after text-green" id="cmp-missing-after">0</strong>
+                                        </div>
+                                        <small id="cmp-missing-note">Đã chuẩn hóa ô trống</small>
+                                    </div>
+                                </div>
+
+                                <div id="hr-gk-actions-list" class="hr-actions-note"></div>
+                            </div>
+
+                            <!-- 2 TAB XEM BẢNG -->
+                            <div class="hr-tabs-bar">
+                                <button type="button" class="hr-tab-btn active" id="tab-btn-changes">
+                                    🔍 Chi tiết các dòng/ô đã làm sạch so với File gốc (<span id="changes-count-badge">0</span>)
+                                </button>
+                                <button type="button" class="hr-tab-btn" id="tab-btn-preview">
+                                    📋 Xem bảng dữ liệu hoàn chỉnh sau làm sạch
+                                </button>
+                            </div>
+
+                            <div id="tab-content-changes" class="hr-mini-table-wrap">
+                                <table class="hr-mini-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Vị trí Dòng</th>
+                                            <th>Cột dữ liệu</th>
+                                            <th>Giá trị ở File Ban Đầu (Trước)</th>
+                                            <th>Giá trị Sau Làm Sạch (Sau)</th>
+                                            <th>Hình thức xử lý</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="hr-changes-tbody"></tbody>
+                                </table>
+                            </div>
+
+                            <div id="tab-content-preview" class="hr-mini-table-wrap" style="display: none;">
+                                <table class="hr-mini-table">
+                                    <thead id="hr-gk-thead"></thead>
+                                    <tbody id="hr-gk-tbody"></tbody>
+                                </table>
+                            </div>
+
+                            <!-- Thông báo mượt mà khi vừa thực hiện làm sạch lại -->
+                            <div id="reclean-status-toast" class="reclean-status-toast" style="display: none;"></div>
+
+                            <div id="hr-reclean-options" class="hr-feedback-drawer" style="display: none;">
+                                <div class="drawer-header-row">
+                                    <h4>🔄 Tùy chỉnh Làm sạch lại dữ liệu (Áp dụng trực tiếp lên File gốc):</h4>
+                                    <button type="button" class="btn-close-drawer" id="btn-close-reclean-drawer" title="Đóng">✕</button>
+                                </div>
+                                <div class="reclean-checkboxes">
+                                    <label><input type="checkbox" id="chk-drop-dup" checked> Xóa hoàn toàn các dòng trùng lặp (Trùng 100% &amp; trùng mã)</label>
+                                    <label><input type="checkbox" id="chk-fill-missing" checked> Điền nhãn '(Chưa cập nhật)' / trung vị vào các ô bị trống</label>
+                                    <label><input type="checkbox" id="chk-drop-missing"> Xóa bỏ hẳn các dòng có bất kỳ ô nào bị trống</label>
+                                    <label><input type="checkbox" id="chk-fix-anomaly" checked> Chuẩn hóa các số âm bất thường về số dương (Bỏ tick để xóa dòng số âm)</label>
+                                </div>
+                                <div class="reclean-quick-chips">
+                                    <span class="chip-hint">Gợi ý lệnh làm sạch nhanh:</span>
+                                    <button type="button" class="reclean-chip" data-cmd="Xóa các dòng có Tạm dừng">🗑️ Xóa dòng 'Tạm dừng'</button>
+                                    <button type="button" class="reclean-chip" data-cmd="Thay (Chưa cập nhật) bằng Chưa phân loại">✏️ Đổi '(Chưa cập nhật)' thành 'Chưa phân loại'</button>
+                                    <button type="button" class="reclean-chip" data-cmd="Xóa dòng nhỏ hơn 50000000">📉 Lọc bỏ dòng &lt; 50 triệu</button>
+                                </div>
+                                <input type="text" id="input-reclean-custom" class="hr-text-input" placeholder="Nhập lệnh làm sạch bổ sung (VD: Xóa các dòng có Closed Lost, hoặc Thay X bằng Y, hoặc Xóa < 50000000)...">
+                                <div class="drawer-btn-row">
+                                    <button type="button" class="btn-execute-loop" id="btn-confirm-reclean">
+                                        ↩ Áp Dụng &amp; Làm Sạch Lại Ngay
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="hr-decision-actions">
+                                <button type="button" class="btn-human-yes" id="btn-human-gk-yes">
+                                    ✅ CÓ — Dữ liệu Hợp lệ (Tiếp tục Phân tích Dashboard &amp; Báo cáo)
+                                </button>
+                                <button type="button" class="btn-human-no" id="btn-human-gk-no">
+                                    ❌ KHÔNG — Quay lại làm sạch dữ liệu
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TRẠM DUYỆT 2 (SAU PHÂN TÍCH): ĐÁNH GIÁ KẾT QUẢ -->
+                    <div id="human-evaluation-panel" class="human-review-panel" style="display: none;">
+                        <div class="hr-header hr-header-gold">
+                            <div class="hr-title-group">
+                                <span class="hr-badge-human badge-gold">👤 BƯỚC ĐÁNH GIÁ KẾT QUẢ (CON NGƯỜI DUYỆT)</span>
+                                <h3>⭐ Đánh giá kết quả phân tích Dashboard &amp; Báo cáo (Đạt yêu cầu?)</h3>
+                            </div>
+                            <span id="hr-eval-loop-tag" class="hr-loop-tag">Đánh giá lần #1</span>
+                        </div>
+
+                        <div class="hr-body">
+                            <div class="hr-insight-preview">
+                                <div class="hr-domain-banner" id="hr-eval-domain"></div>
+                                <div class="hr-kpi-preview-grid" id="hr-eval-kpis"></div>
+                                <div class="hr-top-priorities-preview" id="hr-eval-priorities"></div>
+                            </div>
+
+                            <div id="hr-refine-options" class="hr-feedback-drawer" style="display: none;">
+                                <h4>🔄 Nhập yêu cầu Điều chỉnh &amp; Phân tích lại:</h4>
+                                <textarea id="input-refine-feedback" rows="2" class="hr-textarea" placeholder="Nhập nội dung bạn muốn AI điều chỉnh hoặc phân tích sâu hơn về Dashboard..."></textarea>
+                                <div class="drawer-btn-row">
+                                    <button type="button" class="btn-execute-loop" id="btn-confirm-refine">
+                                        ↩ Gửi Yêu Cầu Điều Chỉnh &amp; Phân Tích Lại
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="hr-decision-actions">
+                                <button type="button" class="btn-human-yes" id="btn-human-eval-yes">
+                                    ✅ CÓ — Đạt yêu cầu (Mở khóa Xuất File Excel, Dashboard, Báo cáo Word)
+                                </button>
+                                <button type="button" class="btn-human-no" id="btn-human-eval-no">
+                                    ❌ KHÔNG — Điều chỉnh &amp; phân tích lại
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BANNER HOÀN TẤT -->
+                    <div id="home-data-banner" class="home-data-banner" style="display: none;">
+                        <div class="banner-icon">🎉</div>
+                        <div class="banner-text">
+                            <strong id="banner-title">Đã phê duyệt hoàn tất!</strong>
+                            <span id="banner-desc">Bạn có thể xem trực tiếp hoặc tải về 3 kết quả bên dưới:</span>
+                        </div>
+                        <div class="banner-actions">
+                            <button class="btn-banner-action" data-view="dashboard">📊 Mở Dashboard KPI</button>
+                            <button class="btn-banner-action" data-view="report">📄 Mở Báo Cáo Word Trình Sếp</button>
+                            <button class="btn-banner-action" data-view="excel">📑 Mở File Excel Đã Làm Sạch</button>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- ==================== VIEW 2: DASHBOARD KPI KINH DOANH (CHUẨN BỐ CỤC MẪU) ==================== -->
+            <section class="content-view" id="view-dashboard">
+                <div id="dash-empty" class="empty-view-placeholder">
+                    <div class="placeholder-icon">📊</div>
+                    <h3>Chưa có dữ liệu Dashboard</h3>
+                    <p>Hãy đưa file dữ liệu và bối cảnh lên ở Trang chủ, sau đó bấm duyệt để tạo Dashboard.</p>
+                    <button class="btn-action-primary" data-view="home">⬅ Về Trang chủ</button>
+                </div>
+
+                <!-- BỐ CỤC DASHBOARD CHUẨN 100% THEO MẪU -->
+                <div id="dash-content" class="dk-wrapper" style="display: none;">
+                    <!-- Header Dashboard: Tiêu đề bên trái + Chiều phân tích & Kỳ báo cáo bên phải -->
+                    <div class="dk-header">
+                        <div class="dk-header-left">
+                            <h2 class="dk-main-title" id="dk-main-title">Dashboard Phân Tích Quản Trị</h2>
+                            <p class="dk-main-sub" id="dk-main-sub"></p>
+                        </div>
+                        <div class="dk-header-filters">
+                            <div class="dk-filter-group">
+                                <label for="dk-dimension-select">Chiều phân tích</label>
+                                <select id="dk-dimension-select" class="dk-select"></select>
+                            </div>
+                            <div class="dk-filter-group">
+                                <label for="dk-period-select">Kỳ báo cáo</label>
+                                <select id="dk-period-select" class="dk-select"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hàng 1: 4 Thẻ KPI (Tone Xanh Dương #2563eb) -->
+                    <div class="dk-kpi-row" id="dk-kpi-container"></div>
+
+                    <!-- Ghi chú trọng tâm vấn đề dưới 4 thẻ KPI -->
+                    <p class="dk-comparison-note" id="dk-comparison-note">
+                        Phân tích đa chiều dựa trên cấu trúc dữ liệu thực tế và bối cảnh vấn đề của doanh nghiệp.
+                    </p>
+
+                    <!-- Hàng 2 & 3: Lưới 2x2 gồm đúng 4 khối biểu đồ chuẩn mẫu (KHÔNG CÓ PHẦN CƠ HỘI) -->
+                    <div class="dk-grid-2x2">
+                        
+                        <!-- KHỐI 1 (TRÊN - TRÁI): DOANH THU THEO THÁNG (BIỂU ĐỒ MIỀN + SỐ LIỆU THEO THÁNG) -->
+                        <div class="dk-card">
+                            <h3 class="dk-card-title" id="dk-trend-title">Doanh thu theo tháng</h3>
+                            <p class="dk-card-sub" id="dk-trend-sub">Doanh thu (VND) · Tối đa 12 tháng có dữ liệu để đối chiếu</p>
+                            <div class="dk-trend-canvas-wrap">
+                                <canvas id="dkTrendCanvas"></canvas>
+                            </div>
+                            <button type="button" class="dk-collapse-btn" id="btn-toggle-monthly-table">
+                                <span id="monthly-toggle-arrow">▶</span> Số liệu theo tháng
+                            </button>
+                            <div id="dk-monthly-table-wrap" class="dk-monthly-table-wrap" style="display: none;">
+                                <table class="dk-mini-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tháng</th>
+                                            <th>Số đơn</th>
+                                            <th>Doanh thu</th>
+                                            <th>Chi phí</th>
+                                            <th>Lợi nhuận</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dk-monthly-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- KHỐI 2 (TRÊN - PHẢI): CƠ CẤU CHI PHÍ (DOUGHNUT BÊN TRÁI + DANH SÁCH % & SỐ TIỀN BÊN PHẢI) -->
+                        <div class="dk-card">
+                            <h3 class="dk-card-title" id="dk-cost-title">Cơ cấu chi phí</h3>
+                            <p class="dk-card-sub" id="dk-cost-sub">Theo Kênh</p>
+                            <div class="dk-cost-layout">
+                                <div class="dk-doughnut-box">
+                                    <canvas id="dkCostCanvas"></canvas>
+                                </div>
+                                <div class="dk-cost-legend" id="dk-cost-legend"></div>
+                            </div>
+                        </div>
+
+                        <!-- KHỐI 3 (DƯỚI - TRÁI): ĐÓNG GÓP DOANH THU (THANH NGANG TỶ LỆ MÀU XANH NGỌC) -->
+                        <div class="dk-card">
+                            <h3 class="dk-card-title" id="dk-rev-title">Đóng góp doanh thu</h3>
+                            <p class="dk-card-sub" id="dk-rev-sub">Theo Kênh</p>
+                            <div class="dk-bars-list" id="dk-rev-bars"></div>
+                            <p class="dk-card-footer" id="dk-rev-footer">4 nhóm theo giá trị giảm dần.</p>
+                        </div>
+
+                        <!-- KHỐI 4 (DƯỚI - PHẢI): NHÓM LÀM THAY ĐỔI DOANH THU (THANH XANH DƯƠNG/NGỌC CHO +, THANH TÍM CHO -) -->
+                        <div class="dk-card">
+                            <h3 class="dk-card-title" id="dk-delta-title">Nhóm làm thay đổi doanh thu</h3>
+                            <p class="dk-card-sub" id="dk-delta-sub">Tháng 02/2026 → Tháng 03/2026 · Kênh</p>
+                            <p class="dk-delta-summary" id="dk-delta-summary"></p>
+                            <div class="dk-bars-list" id="dk-delta-bars"></div>
+                            <p class="dk-card-footer" id="dk-delta-footer">4 nhóm theo độ lớn thay đổi. Thanh tím biểu thị giá trị âm theo độ lớn tuyệt đối.</p>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- ==================== VIEW 3: BÁO CÁO WORD PHÂN TÍCH SÂU DASHBOARD TRÌNH CẤP TRÊN ==================== -->
+            <section class="content-view" id="view-report">
+                <div class="view-header-bar">
+                    <div>
+                        <h2>📄 Báo Cáo Phân Tích Sâu Dashboard &amp; Định Hướng Trình Cấp Trên (Word)</h2>
+                        <p id="report-domain-desc">Phân tích chuyên sâu toàn bộ các chỉ số KPI và 4 biểu đồ trên Dashboard để trình Ban Giám đốc</p>
+                    </div>
+                    <div class="view-header-actions">
+                        <button class="btn-action-secondary" data-view="dashboard">📊 Xem Dashboard</button>
+                        <a href="/api/export/word" class="btn-action-primary">📥 Tải Báo Cáo Word (.docx)</a>
+                    </div>
+                </div>
+
+                <div id="report-empty" class="empty-view-placeholder">
+                    <div class="placeholder-icon">📄</div>
+                    <h3>Chưa có dữ liệu Báo cáo Word</h3>
+                    <p>Hãy đưa file dữ liệu và bối cảnh lên ở Trang chủ, sau đó bấm duyệt để AI phân tích sâu về Dashboard.</p>
+                    <button class="btn-action-primary" data-view="home">⬅ Về Trang chủ</button>
+                </div>
+
+                <div id="report-content" class="report-paper-container" style="display: none;">
+                    <div class="report-paper" id="report-paper-body"></div>
+                </div>
+            </section>
+
+            <!-- ==================== VIEW 4: FILE EXCEL ĐÃ LÀM SẠCH ==================== -->
+            <section class="content-view" id="view-excel">
+                <div class="view-header-bar">
+                    <div>
+                        <h2>📑 Xem Trước File Excel Đã Làm Sạch</h2>
+                        <p>Dữ liệu đã qua Bước 2 (Làm sạch) kèm thống kê đối chiếu so với file ban đầu</p>
+                    </div>
+                    <div class="view-header-actions">
+                        <button class="btn-action-secondary" data-view="home">⬅ Quay lại</button>
+                        <a href="/api/export/excel" class="btn-action-primary">📥 Tải File Excel (.xlsx)</a>
+                    </div>
+                </div>
+
+                <div id="excel-empty" class="empty-view-placeholder">
+                    <div class="placeholder-icon">📑</div>
+                    <h3>Chưa có dữ liệu Excel</h3>
+                    <p>Hãy đưa file Excel hoặc CSV lên ở Trang chủ để hệ thống làm sạch.</p>
+                    <button class="btn-action-primary" data-view="home">⬅ Về Trang chủ</button>
+                </div>
+
+                <div id="excel-content" style="display: none;">
+                    <div class="gatekeeper-stat-strip">
+                        <div class="stat-badge"><span class="badge-lbl">Chất lượng ban đầu → Sau làm sạch:</span> <strong id="gk-stat-health">0% → 100%</strong></div>
+                        <div class="stat-badge"><span class="badge-lbl">Trạng thái:</span> <strong id="gk-stat-decision" style="color: #16a34a;">Đã làm sạch</strong></div>
+                        <div class="stat-badge"><span class="badge-lbl">Số dòng:</span> <strong id="gk-stat-valid">0</strong></div>
+                        <div class="stat-badge"><span class="badge-lbl">Ô trống đã xử lý:</span> <strong id="gk-stat-missing">0</strong></div>
+                        <div class="stat-badge"><span class="badge-lbl">Dòng trùng đã xóa:</span> <strong id="gk-stat-dup">0</strong></div>
+                    </div>
+
+                    <div class="excel-table-glass-card">
+                        <div class="table-toolbar">
+                            <input type="text" id="table-search-input" placeholder="🔍 Tìm kiếm nhanh trong bảng dữ liệu...">
+                            <span id="table-rows-count" class="table-count-label">0 dòng</span>
+                        </div>
+                        <div class="table-scroll-wrap">
+                            <table class="data-preview-table" id="data-preview-table">
+                                <thead id="preview-thead"></thead>
+                                <tbody id="preview-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js?v=14.0"></script>
+</body>
+</html>
